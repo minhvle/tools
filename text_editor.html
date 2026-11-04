@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client-Only Rich Text Editor</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --danger: #ef4444;
+      --editor-bg: #ffffff;
+      --editor-text: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toolbar button,
+    .toolbar select {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      min-height: 38px;
+    }
+
+    .toolbar button:hover,
+    .toolbar select:hover {
+      border-color: var(--accent);
+    }
+
+    .toolbar button.active {
+      outline: 2px solid var(--accent);
+      outline-offset: 0;
+    }
+
+    .toolbar button.danger {
+      background: #7f1d1d;
+      border-color: #991b1b;
+      color: white;
+    }
+
+    .toolbar button.danger:hover {
+      border-color: var(--danger);
+    }
+
+    .editor-shell {
+      flex: 1;
+      min-height: 0;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .editor {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: var(--editor-bg);
+      color: var(--editor-text);
+      border-radius: 14px;
+      padding: 24px;
+      outline: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    .editor:empty:before {
+      content: attr(data-placeholder);
+      color: #9ca3af;
+    }
+
+    .editor h1,
+    .editor h2,
+    .editor h3 {
+      line-height: 1.25;
+      margin-top: 1em;
+      margin-bottom: 0.5em;
+    }
+
+    .editor p {
+      margin: 0 0 0.85em;
+    }
+
+    .editor blockquote {
+      border-left: 4px solid #cbd5e1;
+      margin: 1em 0;
+      padding-left: 1em;
+      color: #374151;
+    }
+
+    .editor ul,
+    .editor ol {
+      padding-left: 1.5em;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .footer strong {
+      color: var(--text);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+      }
+      .topbar,
+      .footer {
+        display: none !important;
+      }
+      .editor-shell {
+        padding: 0 !important;
+        height: auto !important;
+      }
+      .editor {
+        position: static !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        color: #000 !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .editor * {
+        color: inherit !important;
+      }
+      .editor [style*="background-color"] {
+        background-color: yellow !important;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .editor-shell {
+        padding: 10px;
+      }
+
+      .editor {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title-row">
+      <h1 class="title">Client-Only Rich Text Editor</h1>
+      <div id="status" class="status">Ready</div>
+    </div>
+
+    <div class="toolbar">
+      <select id="blockType" title="Block style">
+        <option value="P">Paragraph</option>
+        <option value="H1">Heading 1</option>
+        <option value="H2">Heading 2</option>
+        <option value="H3">Heading 3</option>
+      </select>
+
+      <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+      <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+      <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+
+      <button type="button" id="quoteBtn" title="Block quote">" Quote</button>
+      <button type="button" data-cmd="insertUnorderedList" title="Bullet list">. List</button>
+      <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+
+      <button type="button" data-cmd="undo" title="Undo">Undo</button>
+      <button type="button" data-cmd="redo" title="Redo">Redo</button>
+      <button type="button" id="removeFormatBtn" title="Clear formatting">Clear format</button>
+
+      <button type="button" id="saveBtn" title="Save in browser">Save</button>
+      <button type="button" id="downloadBtn" title="Download HTML">Download HTML</button>
+      <button type="button" id="downloadTxtBtn" title="Download TXT">Download TXT</button>
+      <button type="button" id="openFileBtn" title="Open existing text file">Open File</button>
+      <button type="button" id="encryptBtn" title="Encrypt with password">Encrypt</button>
+      <button type="button" id="decryptBtn" title="Decrypt with password">Decrypt</button>
+      <button type="button" id="highlightBtn" title="Highlight selected text">Highlight</button>
+      <button type="button" id="printBtn" title="Print document">Print</button>
+      <button type="button" id="newBtn" class="danger" title="New document">New</button>
+    </div>
+  </header>
+
+  <main class="editor-shell">
+    <div
+      id="editor"
+      class="editor"
+      contenteditable="true"
+      data-placeholder="Start writing here..."
+      spellcheck="true"
+    ></div>
+  </main>
+
+  <footer class="footer">
+    <div>
+      Words: <strong id="wordCount">0</strong> |
+      Characters: <strong id="charCount">0</strong>
+    </div>
+    <div>
+      Shortcuts: <strong>Ctrl/Cmd+B</strong>, <strong>Ctrl/Cmd+I</strong>, <strong>Ctrl/Cmd+U</strong>, <strong>Ctrl/Cmd+S</strong>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const STORAGE_KEY = "client_only_rich_editor_html_v1";
+      const LAST_SAVED_KEY = "client_only_rich_editor_saved_at_v1";
+
+      const editor = document.getElementById("editor");
+      const statusEl = document.getElementById("status");
+      const wordCountEl = document.getElementById("wordCount");
+      const charCountEl = document.getElementById("charCount");
+      const blockType = document.getElementById("blockType");
+      const saveBtn = document.getElementById("saveBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+      const downloadTxtBtn = document.getElementById("downloadTxtBtn");
+      const openFileBtn = document.getElementById("openFileBtn");
+      const encryptBtn = document.getElementById("encryptBtn");
+      const decryptBtn = document.getElementById("decryptBtn");
+      const highlightBtn = document.getElementById("highlightBtn");
+      const printBtn = document.getElementById("printBtn");
+      const newBtn = document.getElementById("newBtn");
+      const quoteBtn = document.getElementById("quoteBtn");
+      const removeFormatBtn = document.getElementById("removeFormatBtn");
+
+      let autosaveTimer = null;
+      let dirty = false;
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function getPlainText() {
+        return editor.innerText || "";
+      }
+
+      function updateCounts() {
+        const text = getPlainText().trim();
+        const words = text ? text.split(/\s+/).length : 0;
+        const chars = getPlainText().length;
+        wordCountEl.textContent = String(words);
+        charCountEl.textContent = String(chars);
+      }
+
+      function saveSelection() {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        return sel.getRangeAt(0);
+      }
+
+      function restoreSelection(range) {
+        if (!range) return;
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      function markDirty() {
+        dirty = true;
+        setStatus("Unsaved changes");
+      }
+
+      function markSaved() {
+        dirty = false;
+        const now = new Date();
+        localStorage.setItem(LAST_SAVED_KEY, String(now.getTime()));
+        setStatus("Saved at " + now.toLocaleString());
+      }
+
+      function normalizeEmptyEditor() {
+        if (editor.innerHTML.trim() === "" || editor.innerHTML === "<br>") {
+          editor.innerHTML = "<p><br></p>";
+        }
+      }
+
+      async function saveToBrowser(encrypted = false) {
+        try {
+          let contentToSave = editor.innerHTML;
+          if (encrypted) {
+            const password = window.prompt("Enter password to encrypt this document for browser storage:");
+            if (!password) {
+              setStatus("Save canceled (password required for encrypted save)");
+              return;
+            }
+            contentToSave = await encryptWithPassword(password, editor.innerHTML);
+          }
+
+          localStorage.setItem(STORAGE_KEY, contentToSave);
+          markSaved();
+          setStatus(encrypted ? "Saved encrypted copy in browser storage." : "Saved copy in browser storage.");
+        } catch (err) {
+          console.error(err);
+          setStatus("Could not save to browser storage");
+        }
+      }
+
+      async function loadFromBrowser() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          let loadedHTML = saved;
+          let loadedLabel = "browser storage";
+
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.v === 1 && parsed.salt && parsed.iv && parsed.data) {
+              const password = window.prompt("Saved content appears encrypted. Enter password to decrypt:");
+              if (!password) {
+                setStatus("Load canceled (password required to decrypt)");
+                editor.innerHTML = "<p><br></p>";
+                updateCounts();
+                return;
+              }
+              loadedHTML = await decryptWithPassword(password, saved);
+              loadedLabel = "encrypted browser storage";
+            }
+          } catch (err) {
+            // Not encrypted JSON, treat as plain text
+          }
+
+          editor.innerHTML = loadedHTML;
+          const ts = localStorage.getItem(LAST_SAVED_KEY);
+          const label = ts ? new Date(Number(ts)).toLocaleString() : loadedLabel;
+          setStatus("Loaded copy from " + label);
+        } else {
+          editor.innerHTML = "<p><br></p>";
+          setStatus("Ready");
+        }
+        updateCounts();
+      }
+
+      function scheduleAutosave() {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(() => {
+          saveToBrowser(false);
+        }, 700);
+      }
+
+      function applyCommand(cmd, value = null) {
+        editor.focus();
+        document.execCommand(cmd, false, value);
+        normalizeEmptyEditor();
+        markDirty();
+        updateCounts();
+        scheduleAutosave();
+        refreshToolbarState();
+      }
+
+      function setBlock(tagName) {
+        editor.focus();
+        document.execCommand("formatBlock", false, tagName);
+        normalizeEmptyEditor();
+        markDirty();
+        updateCounts();
+        scheduleAutosave();
+        refreshToolbarState();
+      }
+
+      function toggleBlockquote() {
+        editor.focus();
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        let node = sel.anchorNode;
+        if (node && node.nodeType === Node.TEXT_NODE) {
+          node = node.parentNode;
+        }
+
+        const quote = node ? node.closest("blockquote") : null;
+
+        if (quote) {
+          const parent = quote.parentNode;
+          while (quote.firstChild) {
+            parent.insertBefore(quote.firstChild, quote);
+          }
+          parent.removeChild(quote);
+        } else {
+          document.execCommand("formatBlock", false, "blockquote");
+        }
+
+        normalizeEmptyEditor();
+        markDirty();
+        updateCounts();
+        scheduleAutosave();
+        refreshToolbarState();
+      }
+
+      function clearFormatting() {
+        editor.focus();
+        document.execCommand("removeFormat", false, null);
+        document.execCommand("formatBlock", false, "p");
+        markDirty();
+        updateCounts();
+        scheduleAutosave();
+        refreshToolbarState();
+      }
+
+      function refreshToolbarState() {
+        const commandButtons = document.querySelectorAll("[data-cmd]");
+        commandButtons.forEach((btn) => {
+          const cmd = btn.getAttribute("data-cmd");
+          if (["bold", "italic", "underline"].includes(cmd)) {
+            try {
+              btn.classList.toggle("active", document.queryCommandState(cmd));
+            } catch (e) {
+              btn.classList.remove("active");
+            }
+          }
+        });
+
+        const sel = window.getSelection();
+        let node = sel && sel.rangeCount ? sel.anchorNode : null;
+        if (node && node.nodeType === Node.TEXT_NODE) {
+          node = node.parentNode;
+        }
+
+        const block = node ? node.closest("h1,h2,h3,p,blockquote") : null;
+        if (!block) {
+          blockType.value = "P";
+        } else if (block.tagName === "BLOCKQUOTE") {
+          blockType.value = "P";
+        } else {
+          blockType.value = block.tagName;
+        }
+
+        quoteBtn.classList.toggle("active", !!(node && node.closest("blockquote")));
+      }
+
+      function downloadHtml() {
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exported Document</title>
+</head>
+<body>
+${editor.innerHTML}
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "document.html";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus("Downloaded document.html");
+      }
+
+      function downloadText() {
+        const text = getPlainText();
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "document.txt";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus("Downloaded document.txt");
+      }
+
+      function bytesToBase64(bytes) {
+        const binary = String.fromCharCode(...new Uint8Array(bytes));
+        return btoa(binary);
+      }
+
+      function base64ToBytes(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function deriveKey(password, salt) {
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+          "raw",
+          enc.encode(password),
+          "PBKDF2",
+          false,
+          ["deriveKey"]
+        );
+        return await window.crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt,
+            iterations: 250000,
+            hash: "SHA-256",
+          },
+          keyMaterial,
+          {
+            name: "AES-GCM",
+            length: 256,
+          },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      async function encryptWithPassword(password, plaintext) {
+        const enc = new TextEncoder();
+        const salt = window.crypto.getRandomValues(new Uint8Array(16));
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(password, salt);
+        const cipher = await window.crypto.subtle.encrypt(
+          {
+            name: "AES-GCM",
+            iv,
+          },
+          key,
+          enc.encode(plaintext)
+        );
+
+        return JSON.stringify({
+          v: 1,
+          salt: bytesToBase64(salt),
+          iv: bytesToBase64(iv),
+          data: bytesToBase64(new Uint8Array(cipher)),
+        });
+      }
+
+      async function decryptWithPassword(password, encryptedText) {
+        let parsed;
+        try {
+          parsed = JSON.parse(encryptedText);
+        } catch (err) {
+          throw new Error("Encrypted data is not valid JSON.");
+        }
+
+        if (!parsed || parsed.v !== 1 || !parsed.salt || !parsed.iv || !parsed.data) {
+          throw new Error("Encrypted data format is invalid.");
+        }
+
+        const salt = base64ToBytes(parsed.salt);
+        const iv = base64ToBytes(parsed.iv);
+        const data = base64ToBytes(parsed.data);
+        const key = await deriveKey(password, salt);
+        const decrypted = await window.crypto.subtle.decrypt(
+          {
+            name: "AES-GCM",
+            iv,
+          },
+          key,
+          data
+        );
+
+        const dec = new TextDecoder();
+        return dec.decode(decrypted);
+      }
+
+      async function encryptEditorContent() {
+        if (!window.crypto || !window.crypto.subtle) {
+          setStatus("Encryption not supported in this browser.");
+          return;
+        }
+
+        const password = window.prompt("Enter password to encrypt this document:");
+        if (!password) {
+          setStatus("Encryption canceled");
+          return;
+        }
+
+        try {
+          const encrypted = await encryptWithPassword(password, editor.innerHTML);
+          editor.textContent = encrypted;
+          setStatus("Encrypted successfully. Save the text from the editor.");
+          dirty = true;
+          updateCounts();
+        } catch (err) {
+          console.error(err);
+          setStatus("Encryption failed: " + err.message);
+        }
+      }
+
+      async function decryptEditorContent() {
+        if (!window.crypto || !window.crypto.subtle) {
+          setStatus("Decryption not supported in this browser.");
+          return;
+        }
+
+        const password = window.prompt("Enter password to decrypt this document:");
+        if (!password) {
+          setStatus("Decryption canceled");
+          return;
+        }
+
+        try {
+          const decrypted = await decryptWithPassword(password, editor.innerText.trim());
+          editor.innerHTML = decrypted;
+          setStatus("Decrypted successfully.");
+          dirty = true;
+          updateCounts();
+        } catch (err) {
+          console.error(err);
+          setStatus("Decryption failed: " + err.message);
+        }
+      }
+
+      function highlightSelection() {
+        editor.focus();
+        if (!document.execCommand("hiliteColor", false, "yellow")) {
+          // Some browsers use 'backColor' for non-editable elements
+          document.execCommand("backColor", false, "yellow");
+        }
+        markDirty();
+        setStatus("Text highlighted");
+      }
+
+      function printDocument() {
+        setStatus("Printing...");
+        window.print();
+        setStatus("Ready");
+      }
+
+      function openFile() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".txt,.html,.htm";
+        input.onchange = (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const text = reader.result || "";
+            if (file.name.toLowerCase().endsWith(".html") || file.name.toLowerCase().endsWith(".htm")) {
+              editor.innerHTML = String(text);
+            } else {
+              editor.textContent = String(text);
+            }
+            normalizeEmptyEditor();
+            updateCounts();
+            markDirty();
+            setStatus(`Opened ${file.name}`);
+          };
+          reader.onerror = () => {
+            setStatus("Could not open file.");
+          };
+          reader.readAsText(file, "UTF-8");
+        };
+        input.click();
+      }
+
+      function createNewDocument() {
+        const text = getPlainText().trim();
+        if (text && !window.confirm("Create a new document? Current content will be cleared.")) {
+          return;
+        }
+        editor.innerHTML = "<p><br></p>";
+        dirty = false;
+        updateCounts();
+        setStatus("New document");
+        editor.focus();
+      }
+
+      document.querySelectorAll("[data-cmd]").forEach((button) => {
+        button.addEventListener("click", () => {
+          applyCommand(button.getAttribute("data-cmd"));
+        });
+      });
+
+      blockType.addEventListener("change", () => {
+        setBlock(blockType.value.toLowerCase());
+      });
+
+      quoteBtn.addEventListener("click", toggleBlockquote);
+      removeFormatBtn.addEventListener("click", clearFormatting);
+      saveBtn.addEventListener("click", async () => {
+        const doEncrypt = window.confirm("Save encrypted to browser? OK = yes, Cancel = no.");
+        await saveToBrowser(doEncrypt);
+      });
+      downloadBtn.addEventListener("click", downloadHtml);
+      downloadTxtBtn.addEventListener("click", downloadText);
+      if (encryptBtn) {
+        encryptBtn.addEventListener("click", encryptEditorContent);
+      } else {
+        console.warn("encryptBtn not found");
+      }
+      if (decryptBtn) {
+        decryptBtn.addEventListener("click", decryptEditorContent);
+      } else {
+        console.warn("decryptBtn not found");
+      }
+      openFileBtn.addEventListener("click", openFile);
+      highlightBtn.addEventListener("click", highlightSelection);
+      printBtn.addEventListener("click", printDocument);
+      newBtn.addEventListener("click", createNewDocument);
+
+      editor.addEventListener("input", () => {
+        markDirty();
+        updateCounts();
+        scheduleAutosave();
+      });
+
+      editor.addEventListener("keyup", refreshToolbarState);
+      editor.addEventListener("mouseup", refreshToolbarState);
+      editor.addEventListener("focus", refreshToolbarState);
+
+      editor.addEventListener("keydown", (event) => {
+        const mod = event.ctrlKey || event.metaKey;
+        const key = event.key.toLowerCase();
+
+        if (mod && key === "s") {
+          event.preventDefault();
+          saveToBrowser(false);
+          return;
+        }
+
+        if (mod && key === "b") {
+          event.preventDefault();
+          applyCommand("bold");
+          return;
+        }
+
+        if (mod && key === "i") {
+          event.preventDefault();
+          applyCommand("italic");
+          return;
+        }
+
+        if (mod && key === "u") {
+          event.preventDefault();
+          applyCommand("underline");
+          return;
+        }
+
+        if (event.key === "Tab") {
+          event.preventDefault();
+          document.execCommand("insertHTML", false, "&nbsp;&nbsp;&nbsp;&nbsp;");
+          markDirty();
+          updateCounts();
+          scheduleAutosave();
+        }
+      });
+
+      window.addEventListener("beforeunload", (event) => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+
+      loadFromBrowser();
+      editor.focus();
+    })();
+  </script>
+</body>
+</html>
