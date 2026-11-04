@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polished World Clock</title>
+  <style>
+    :root {
+      --bg-1: #0f172a;
+      --bg-2: #1e293b;
+      --panel: rgba(255, 255, 255, 0.08);
+      --panel-border: rgba(255, 255, 255, 0.14);
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --danger: #f87171;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .header h1 {
+      margin: 0 0 10px;
+      font-size: 2.4rem;
+      letter-spacing: 0.5px;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.6fr auto auto;
+      gap: 12px;
+      margin: 28px 0 24px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar select,
+    .toolbar button {
+      border: none;
+      outline: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+
+    .toolbar select {
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
+      width: 100%;
+    }
+
+    .toolbar button {
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .toolbar button:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .add-btn {
+      background: var(--accent);
+      color: #06283d;
+    }
+
+    .toggle-btn {
+      background: #e2e8f0;
+      color: #0f172a;
+      min-width: 120px;
+    }
+
+    .status {
+      margin: 0 0 20px;
+      min-height: 22px;
+      color: #fde68a;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .timer-panel {
+      display: grid;
+      grid-template-columns: 1.2fr auto auto auto;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      align-items: center;
+    }
+
+    .timer-display {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .timer-label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .timer-time {
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .timer-inputs {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .timer-inputs label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .timer-inputs input {
+      width: 88px;
+      border: none;
+      outline: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
+    }
+
+    .timer-btn {
+      border: none;
+      outline: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .timer-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .timer-start {
+      background: #86efac;
+      color: #14532d;
+    }
+
+    .timer-pause {
+      background: #fcd34d;
+      color: #78350f;
+    }
+
+    .timer-reset {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .clock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+
+    .clock-card {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .clock-card.day {
+      background: linear-gradient(140deg, hsl(60, 33%, 99%), hsl(60, 100%, 100%));
+      border-color: rgba(251, 250, 243, 0.4);
+      color: #1f2937;
+    }
+
+    .clock-card.night {
+      background: linear-gradient(140deg, #0f172a, #1e293b);
+      border-color: rgba(148, 163, 184, 0.4);
+      color: #f8fafc;
+    }
+
+    .clock-card.day .country,
+    .clock-card.day .date,
+    .clock-card.day .timezone {
+      color: #334155;
+    }
+
+    .clock-card.night .country,
+    .clock-card.night .date,
+    .clock-card.night .timezone {
+      color: #cbd5e1;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .flag {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .remove-btn {
+      background: rgba(248, 113, 113, 0.14);
+      color: #fecaca;
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 10px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .remove-btn:hover {
+      background: rgba(248, 113, 113, 0.2);
+    }
+
+    .city {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin: 4px 0;
+    }
+
+    .country {
+      color: var(--muted);
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+    }
+
+    .time {
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .date {
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .timezone {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius);
+    }
+
+    @media (max-width: 760px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .timer-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .toggle-btn,
+      .add-btn,
+      .timer-btn {
+        width: 100%;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>World Clock Dashboard</h1>
+      <p>Track time across the world with live clocks, flags, and city controls.</p>
+    </div>
+
+    <div class="toolbar">
+      <select id="citySelect">
+        <option value="">Select a city to add...</option>
+      </select>
+      <button class="add-btn" id="addCityBtn">Add City</button>
+      <button class="toggle-btn" id="formatToggleBtn">24-Hour: Off</button>
+    </div>
+
+    <div class="status" id="statusMessage"></div>
+
+    <div class="timer-panel">
+      <div class="timer-display">
+        <div class="timer-label">Countdown Timer</div>
+        <div class="timer-time" id="timerDisplay">00:00</div>
+      </div>
+      <div class="timer-inputs">
+        <label>
+          Minutes
+          <input type="number" id="timerMinutes" min="0" max="999" value="5" />
+        </label>
+        <label>
+          Seconds
+          <input type="number" id="timerSeconds" min="0" max="59" value="0" />
+        </label>
+      </div>
+      <button class="timer-btn timer-start" id="timerStartBtn">Start</button>
+      <button class="timer-btn timer-pause" id="timerPauseBtn">Pause</button>
+      <button class="timer-btn timer-reset" id="timerResetBtn">Reset</button>
+    </div>
+
+    <div class="clock-grid" id="clockGrid"></div>
+  </div>
+
+  <script>
+    const cityOptions = [
+      { city: "New York", country: "United States", flag: "🇺🇸", timeZone: "America/New_York" },
+      { city: "London", country: "United Kingdom", flag: "🇬🇧", timeZone: "Europe/London" },
+      { city: "Paris", country: "France", flag: "🇫🇷", timeZone: "Europe/Paris" },
+      { city: "Tokyo", country: "Japan", flag: "🇯🇵", timeZone: "Asia/Tokyo" },
+      { city: "Sydney", country: "Australia", flag: "🇦🇺", timeZone: "Australia/Sydney" },
+      { city: "Dubai", country: "United Arab Emirates", flag: "🇦🇪", timeZone: "Asia/Dubai" },
+      { city: "Mumbai", country: "India", flag: "🇮🇳", timeZone: "Asia/Kolkata" },
+      { city: "São Paulo", country: "Brazil", flag: "🇧🇷", timeZone: "America/Sao_Paulo" },
+      { city: "Singapore", country: "Singapore", flag: "🇸🇬", timeZone: "Asia/Singapore" },
+      { city: "Berlin", country: "Germany", flag: "🇩🇪", timeZone: "Europe/Berlin" },
+      { city: "Toronto", country: "Canada", flag: "🇨🇦", timeZone: "America/Toronto" },
+      { city: "Cape Town", country: "South Africa", flag: "🇿🇦", timeZone: "Africa/Johannesburg" },
+      { city: "Seoul", country: "South Korea", flag: "🇰🇷", timeZone: "Asia/Seoul" },
+      { city: "Auckland", country: "New Zealand", flag: "🇳🇿", timeZone: "Pacific/Auckland" },
+      { city: "Ho Chi Minh City", country: "Vietnam", flag: "🇻🇳", timeZone: "Asia/Ho_Chi_Minh" },
+      { city: "Melbourne", country: "Australia", flag: "🇦🇺", timeZone: "Australia/Melbourne" },
+      { city: "Beijing", country: "China", flag: "🇨🇳", timeZone: "Asia/Shanghai" }
+    ];
+
+    const defaultCities = [
+      "New York",
+      "London",
+      "Paris",
+      "Tokyo",
+      "Sydney",
+      "Dubai",
+      "Mumbai",
+      "São Paulo",
+      "Singapore",
+      "Berlin",
+      "Toronto",
+      "Cape Town",
+      "Seoul",
+      "Auckland",
+      "Ho Chi Minh City",
+      "Melbourne",
+      "Beijing"
+    ];
+
+    let is24Hour = false;
+    let selectedClocks = cityOptions.filter(item => defaultCities.includes(item.city));
+
+    const citySelect = document.getElementById("citySelect");
+    const addCityBtn = document.getElementById("addCityBtn");
+    const formatToggleBtn = document.getElementById("formatToggleBtn");
+    const clockGrid = document.getElementById("clockGrid");
+    const statusMessage = document.getElementById("statusMessage");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const timerMinutes = document.getElementById("timerMinutes");
+    const timerSeconds = document.getElementById("timerSeconds");
+    const timerStartBtn = document.getElementById("timerStartBtn");
+    const timerPauseBtn = document.getElementById("timerPauseBtn");
+    const timerResetBtn = document.getElementById("timerResetBtn");
+
+    let timerRemainingSeconds = 300;
+    let timerIntervalId = null;
+    let timerHasStarted = false;
+
+/**
+ * Populate the city select dropdown with options from cityOptions.
+ * Each option contains the country flag, city name, and country name.
+ */
+    function populateDropdown() {
+      citySelect.innerHTML = `<option value="">Select a city to add...</option>`;
+      cityOptions.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.city;
+        option.textContent = `${item.flag} ${item.city}, ${item.country}`;
+        citySelect.appendChild(option);
+      });
+    }
+
+/**
+ * Displays a status message in the #statusMessage element for a given duration.
+ * If the duration is 0 or less, the message is displayed indefinitely.
+ * Otherwise, the message is displayed for the given duration and then removed.
+ * @param {string} message - The status message to display.
+ * @param {number} [duration=2200] - The duration for which to display the message in milliseconds.
+ */
+    function showStatus(message, duration = 2200) {
+      statusMessage.textContent = message;
+      if (duration > 0) {
+        setTimeout(() => {
+          if (statusMessage.textContent === message) {
+            statusMessage.textContent = "";
+          }
+        }, duration);
+      }
+    }
+
+    function formatCountdown(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function syncTimerFromInputs() {
+      const minutes = Math.max(0, parseInt(timerMinutes.value || "0", 10));
+      const seconds = Math.max(0, Math.min(59, parseInt(timerSeconds.value || "0", 10)));
+      timerMinutes.value = String(minutes);
+      timerSeconds.value = String(seconds);
+      timerRemainingSeconds = (minutes * 60) + seconds;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = formatCountdown(timerRemainingSeconds);
+    }
+
+    function stopTimerInterval() {
+      if (timerIntervalId) {
+        clearInterval(timerIntervalId);
+        timerIntervalId = null;
+      }
+    }
+
+    function startTimer() {
+      if (!timerIntervalId && !timerHasStarted) {
+        syncTimerFromInputs();
+      }
+
+      if (timerRemainingSeconds <= 0) {
+        showStatus("Set a timer duration before starting.");
+        return;
+      }
+
+      if (timerIntervalId) {
+        showStatus("Timer is already running.");
+        return;
+      }
+
+      timerHasStarted = true;
+      timerIntervalId = setInterval(() => {
+        if (timerRemainingSeconds <= 1) {
+          timerRemainingSeconds = 0;
+          updateTimerDisplay();
+          stopTimerInterval();
+          timerHasStarted = false;
+          showStatus("Timer finished.");
+          return;
+        }
+
+        timerRemainingSeconds -= 1;
+        updateTimerDisplay();
+      }, 1000);
+
+      showStatus("Timer started.");
+    }
+
+    function pauseTimer() {
+      if (!timerIntervalId) {
+        showStatus("Timer is not running.");
+        return;
+      }
+
+      stopTimerInterval();
+      showStatus("Timer paused.");
+    }
+
+    function resetTimer() {
+      stopTimerInterval();
+      timerHasStarted = false;
+      syncTimerFromInputs();
+      showStatus("Timer reset.");
+    }
+
+    function formatTime(timeZone) {
+      return new Date().toLocaleTimeString("en-US", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: !is24Hour
+      });
+    }
+
+    function formatDate(timeZone) {
+      return new Date().toLocaleDateString("en-US", {
+        timeZone,
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    }
+
+    function isDayInTimeZone(timeZone) {
+      const hourString = new Date().toLocaleTimeString("en-US", {
+        timeZone,
+        hour12: false,
+        hour: "2-digit",
+      });
+      const hour = parseInt(hourString.split(":")[0], 10);
+      return hour >= 6 && hour < 18;
+    }
+
+/**
+ * Renders the list of world clocks from the selectedClocks array.
+ * If the array is empty, it displays an empty state message.
+ * Otherwise, it maps each clock object to a HTML string and joins them together.
+ * Each clock string contains the city, country, flag, timezone, time, and date information.
+ * The HTML string is then set as the innerHTML of the clockGrid element.
+ * @return {void}
+ */
+    function renderClocks() {
+      if (selectedClocks.length === 0) {
+        clockGrid.innerHTML = `
+          <div class="empty-state">
+            No cities selected. Use the dropdown above to add a world clock.
+          </div>
+        `;
+        return;
+      }
+
+      clockGrid.innerHTML = selectedClocks
+        .map((clock) => {
+          const safeId = cssSafeId(clock.city);
+          const dayClass = isDayInTimeZone(clock.timeZone) ? "day" : "night";
+          return `
+            <div class="clock-card ${dayClass}" id="card-${safeId}">
+              <div class="card-top">
+                <div class="flag" aria-label="${clock.country} flag">${clock.flag}</div>
+                <button class="remove-btn" onclick="removeCity('${clock.city.replace(/'/g, "\\'")}')">Remove</button>
+              </div>
+              <div class="city">${clock.city}</div>
+              <div class="country">${clock.country}</div>
+              <div class="time" id="time-${safeId}">${formatTime(clock.timeZone)}</div>
+              <div class="date" id="date-${safeId}">${formatDate(clock.timeZone)}</div>
+              <div class="timezone">${clock.timeZone}</div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function updateClocks() {
+      selectedClocks.forEach((clock) => {
+        const safeId = cssSafeId(clock.city);
+        const timeEl = document.getElementById(`time-${safeId}`);
+        const dateEl = document.getElementById(`date-${safeId}`);
+        const cardEl = document.getElementById(`card-${safeId}`);
+
+        if (timeEl) timeEl.textContent = formatTime(clock.timeZone);
+        if (dateEl) dateEl.textContent = formatDate(clock.timeZone);
+        if (cardEl) {
+          cardEl.classList.toggle("day", isDayInTimeZone(clock.timeZone));
+          cardEl.classList.toggle("night", !isDayInTimeZone(clock.timeZone));
+        }
+      });
+    }
+
+    function cssSafeId(value) {
+      return value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    }
+
+    function addCity() {
+      const selectedCityName = citySelect.value;
+
+      if (!selectedCityName) {
+        showStatus("Please select a city first.");
+        return;
+      }
+
+      const cityData = cityOptions.find(item => item.city === selectedCityName);
+      const alreadyExists = selectedClocks.some(item => item.city === selectedCityName);
+
+      if (alreadyExists) {
+        showStatus(`${selectedCityName} is already on the dashboard.`);
+        return;
+      }
+
+      selectedClocks.push(cityData);
+      renderClocks();
+      updateClocks();
+      citySelect.value = "";
+      showStatus(`${selectedCityName} added successfully.`);
+    }
+
+    function removeCity(cityName) {
+      selectedClocks = selectedClocks.filter(item => item.city !== cityName);
+      renderClocks();
+      showStatus(`${cityName} removed.`);
+    }
+
+    function toggleTimeFormat() {
+      is24Hour = !is24Hour;
+      formatToggleBtn.textContent = `24-Hour: ${is24Hour ? "On" : "Off"}`;
+      updateClocks();
+      showStatus(`Time format changed to ${is24Hour ? "24-hour" : "12-hour"}.`);
+    }
+
+    addCityBtn.addEventListener("click", addCity);
+    formatToggleBtn.addEventListener("click", toggleTimeFormat);
+    citySelect.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") addCity();
+    });
+    timerStartBtn.addEventListener("click", startTimer);
+    timerPauseBtn.addEventListener("click", pauseTimer);
+    timerResetBtn.addEventListener("click", resetTimer);
+    timerMinutes.addEventListener("input", () => {
+      if (!timerIntervalId) syncTimerFromInputs();
+    });
+    timerSeconds.addEventListener("input", () => {
+      if (!timerIntervalId) syncTimerFromInputs();
+    });
+
+    populateDropdown();
+    syncTimerFromInputs();
+    renderClocks();
+    updateClocks();
+    setInterval(updateClocks, 1000);
+
+    window.removeCity = removeCity;
+  </script>
+</body>
+</html>
