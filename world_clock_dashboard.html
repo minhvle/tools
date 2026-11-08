@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalTime - World Clock & Time Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .font-mono-time {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(71, 85, 105, 1);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-light {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        /* Daytime theme card: Crisp white background with dark text */
+        .day-gradient {
+            background: #ffffff;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(255, 255, 255, 0.15);
+        }
+        .day-gradient .text-white {
+            color: #0f172a !important;
+        }
+        .day-gradient .text-slate-400, .day-gradient .text-slate-300 {
+            color: #475569 !important;
+        }
+        .day-gradient .text-slate-500, .day-gradient .text-slate-600 {
+            color: #64748b !important;
+        }
+        .day-gradient .border-slate-800\/60 {
+            border-color: #cbd5e1 !important;
+        }
+        /* Nighttime theme card: Rich dark gradient */
+        .night-gradient {
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col md:flex-row overflow-hidden selection:bg-blue-500 selection:text-white">
+
+    <!-- Mobile Navigation Bar -->
+    <header class="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 z-50">
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-globe"></i>
+            </div>
+            <span class="font-bold text-lg tracking-tight text-white">GlobalTime</span>
+        </div>
+        <button id="mobileMenuBtn" class="text-slate-400 hover:text-white p-2 rounded-lg bg-slate-800">
+            <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900/95 border-r border-slate-800 backdrop-blur-xl flex flex-col transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static md:z-auto">
+        <!-- Logo Header -->
+        <div class="hidden md:flex items-center space-x-3 px-6 py-6 border-b border-slate-800/60">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/25">
+                <i class="fa-solid fa-globe"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-none tracking-tight text-white">GlobalTime</h1>
+                <span class="text-xs text-slate-400 font-medium">World Clock & Suite</span>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            <div class="px-3 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dashboards</div>
+            
+            <button onclick="switchTab('world-clock')" id="nav-world-clock" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+                <i class="fa-solid fa-clock w-5 text-center"></i>
+                <span>World Clocks</span>
+            </button>
+
+            <button onclick="switchTab('planner')" id="nav-planner" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+                <i class="fa-solid fa-calendar-days w-5 text-center"></i>
+                <span>Meeting Planner</span>
+            </button>
+
+            <div class="pt-6 px-3 pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Time Utilities</div>
+
+            <button onclick="switchTab('timer')" id="nav-timer" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+                <i class="fa-solid fa-hourglass-half w-5 text-center"></i>
+                <span>Countdown Timer</span>
+            </button>
+
+            <button onclick="switchTab('stopwatch')" id="nav-stopwatch" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+                <i class="fa-solid fa-stopwatch w-5 text-center"></i>
+                <span>Stopwatch</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar Footer / Preferences -->
+        <div class="p-4 border-t border-slate-800/60 bg-slate-900/50">
+            <div class="flex items-center justify-between bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/50">
+                <div class="flex items-center space-x-2 text-xs text-slate-300 font-medium">
+                    <i class="fa-solid fa-sliders text-blue-400"></i>
+                    <span>Time Format</span>
+                </div>
+                <button id="toggleTimeFormat" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors">
+                    12H
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 hidden md:hidden"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-950">
+        
+        <!-- TOP TOOLBAR: Quick Search & Actions -->
+        <header class="px-6 py-4 border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
+            
+            <!-- Quick Add / Search Combobox -->
+            <div class="relative w-full sm:w-96" id="searchContainer">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input 
+                        type="text" 
+                        id="citySearchInput"
+                        placeholder="Search & add cities (e.g., Tokyo, London)..." 
+                        class="w-full bg-slate-900/90 border border-slate-700/70 rounded-xl pl-10 pr-10 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all shadow-inner"
+                        autocomplete="off"
+                    />
+                    <button id="clearSearchBtn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Autocomplete Dropdown List -->
+                <div id="searchResults" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto z-50 divide-y divide-slate-800">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+
+            <!-- Dashboard Controls -->
+            <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <!-- Region Filter -->
+                <div class="relative w-full sm:w-auto">
+                    <select id="regionFilter" class="w-full sm:w-auto bg-slate-900 border border-slate-700/70 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="ALL">All Regions</option>
+                        <option value="Americas">Americas</option>
+                        <option value="Europe">Europe</option>
+                        <option value="Asia">Asia & Pacific</option>
+                        <option value="Africa">Africa</option>
+                        <option value="Middle East">Middle East & Central Asia</option>
+                    </select>
+                </div>
+
+                <!-- Reset to Default Button -->
+                <button id="resetDefaultsBtn" title="Reset to default cities" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium border border-slate-700/60 transition-colors flex items-center space-x-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                    <span class="hidden sm:inline">Reset</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE TAB CONTENT PANELS -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8" id="contentContainer">
+
+            <!-- TAB 1: WORLD CLOCK DASHBOARD -->
+            <div id="tab-world-clock" class="tab-panel space-y-8">
+                
+                <!-- HERO SECTION: LOCAL TIME CARD -->
+                <section id="localHeroSection">
+                    <div id="localTimeCard" class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-slate-900/60 border border-blue-500/30 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+                        <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
+                                    <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                                    <span>YOUR LOCAL SYSTEM TIME</span>
+                                </div>
+                                <h2 id="localCityName" class="text-2xl sm:text-4xl font-bold text-white tracking-tight">Detecting Location...</h2>
+                                <p id="localDateStr" class="text-sm sm:text-base text-slate-300 mt-1 font-medium">---</p>
+                                
+                                <div class="mt-4 flex items-center space-x-3 text-xs text-slate-400">
+                                    <span id="localTimezoneStr" class="bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/50">--/--</span>
+                                    <span id="localUtcOffset" class="bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/50">UTC --</span>
+                                </div>
+                            </div>
+
+                            <!-- Big Digital Clock -->
+                            <div class="text-left md:text-right">
+                                <div id="localTimeDigits" class="font-mono-time text-4xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tight drop-shadow-md">
+                                    00:00:00
+                                </div>
+                                <div id="localDayNightBadge" class="mt-2 inline-flex items-center space-x-2 px-3 py-1 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                                    <i class="fa-solid fa-sun"></i>
+                                    <span>Daytime</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FAVORITES SECTION -->
+                <section id="favoritesSection" class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-star text-amber-400"></i>
+                            <span>Pinned Favorites</span>
+                            <span id="favCount" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">0</span>
+                        </h3>
+                    </div>
+
+                    <!-- Favorite Cards Container -->
+                    <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Empty Favorites Indicator -->
+                    <div id="emptyFavorites" class="hidden p-6 rounded-2xl glass-card-light text-center border-dashed border-slate-800">
+                        <p class="text-sm text-slate-400">No favorite cities pinned yet. Click the star icon on any city card to pin it here for quick viewing.</p>
+                    </div>
+                </section>
+
+                <!-- ALL WORLD CITIES GRID -->
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-earth-americas text-blue-400"></i>
+                            <span>World Clocks</span>
+                            <span id="totalCitiesCount" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">0</span>
+                        </h3>
+                    </div>
+
+                    <!-- Main Grid -->
+                    <div id="citiesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <!-- Cards populated dynamically by JS -->
+                    </div>
+
+                    <!-- EMPTY STATE FOR NO CITIES -->
+                    <div id="emptyCitiesState" class="hidden py-16 px-4 text-center glass-card rounded-3xl border-dashed border-slate-700/80">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400 text-2xl">
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">No Cities to Display</h3>
+                        <p class="text-sm text-slate-400 max-w-md mx-auto mb-6">
+                            You've removed all cities or your filter didn't match any locations. Search for a city above or restore default world clocks.
+                        </p>
+                        <button onclick="resetDefaultCities()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-blue-600/30 inline-flex items-center space-x-2">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Restore Default Cities</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- TAB 2: MEETING PLANNER -->
+            <div id="tab-planner" class="tab-panel hidden space-y-6">
+                <div class="glass-card p-6 rounded-2xl border border-slate-800">
+                    <div class="max-w-2xl">
+                        <h2 class="text-2xl font-bold text-white mb-2">World Meeting Planner</h2>
+                        <p class="text-sm text-slate-400">
+                            Compare times across your saved cities to find the best overlap for international video calls and meetings.
+                        </p>
+                    </div>
+
+                    <!-- Base Time Slider Controls -->
+                    <div class="mt-6 p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                Adjust Base Local Time:
+                            </label>
+                            <span id="plannerBaseTimeDisplay" class="font-mono-time text-base font-bold text-blue-400">
+                                12:00 PM (Today)
+                            </span>
+                        </div>
+                        <input type="range" id="plannerHourSlider" min="0" max="23" value="12" class="w-full accent-blue-500 cursor-pointer">
+                        <div class="flex justify-between text-xs text-slate-500 font-mono">
+                            <span>12 AM</span>
+                            <span>6 AM</span>
+                            <span>12 PM</span>
+                            <span>6 PM</span>
+                            <span>11 PM</span>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Grid -->
+                    <div class="mt-6 space-y-3" id="plannerList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: COUNTDOWN TIMER -->
+            <div id="tab-timer" class="tab-panel hidden max-w-xl mx-auto space-y-6">
+                <div class="glass-card p-6 sm:p-8 rounded-3xl border border-slate-800 text-center space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-hourglass-half text-blue-400"></i>
+                        <span>Countdown Timer</span>
+                    </h2>
+
+                    <!-- Timer Display -->
+                    <div id="timerDisplay" class="font-mono-time text-5xl sm:text-6xl font-bold text-white py-4 tracking-tight">
+                        05:00
+                    </div>
+
+                    <!-- Quick Preset Buttons -->
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="setTimerPreset(1)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">1 Min</button>
+                        <button onclick="setTimerPreset(5)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">5 Min</button>
+                        <button onclick="setTimerPreset(15)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">15 Min</button>
+                        <button onclick="setTimerPreset(30)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">30 Min</button>
+                    </div>
+
+                    <!-- Custom Inputs -->
+                    <div class="flex justify-center items-center space-x-3">
+                        <input type="number" id="timerMinutesInput" placeholder="Min" min="0" max="999" class="w-20 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-mono text-white">
+                        <span class="text-slate-500 font-bold">:</span>
+                        <input type="number" id="timerSecondsInput" placeholder="Sec" min="0" max="59" class="w-20 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-mono text-white">
+                        <button onclick="setCustomTimer()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">Set</button>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div class="flex justify-center space-x-4 pt-4">
+                        <button id="startTimerBtn" onclick="toggleTimer()" class="w-28 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-colors">
+                            Start
+                        </button>
+                        <button onclick="resetTimer()" class="w-28 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-700 transition-colors">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: STOPWATCH -->
+            <div id="tab-stopwatch" class="tab-panel hidden max-w-xl mx-auto space-y-6">
+                <div class="glass-card p-6 sm:p-8 rounded-3xl border border-slate-800 text-center space-y-6">
+                    <h2 class="text-xl font-bold text-white flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-stopwatch text-indigo-400"></i>
+                        <span>Stopwatch</span>
+                    </h2>
+
+                    <!-- Stopwatch Display -->
+                    <div id="stopwatchDisplay" class="font-mono-time text-5xl sm:text-6xl font-bold text-white py-4 tracking-tight">
+                        00:00.00
+                    </div>
+
+                    <!-- Stopwatch Actions -->
+                    <div class="flex justify-center space-x-4">
+                        <button id="startStopwatchBtn" onclick="toggleStopwatch()" class="w-28 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-colors">
+                            Start
+                        </button>
+                        <button onclick="recordLap()" class="w-28 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-700 transition-colors">
+                            Lap
+                        </button>
+                        <button onclick="resetStopwatch()" class="w-28 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-700 transition-colors">
+                            Reset
+                        </button>
+                    </div>
+
+                    <!-- Lap Times Container -->
+                    <div id="lapsContainer" class="hidden text-left max-h-48 overflow-y-auto bg-slate-900/80 p-4 rounded-xl border border-slate-800 text-xs font-mono">
+                        <div id="lapsList" class="space-y-1"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- INFORMATION METADATA MODAL -->
+    <div id="infoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+            <button onclick="closeMetadataModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+                <span id="modalFlag" class="text-3xl"></span>
+                <div>
+                    <h3 id="modalCityName" class="text-xl font-bold text-white"></h3>
+                    <p id="modalCountry" class="text-xs text-slate-400"></p>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+                    <span class="text-slate-400">IANA Timezone String:</span>
+                    <span id="modalTimezone" class="font-mono text-blue-400"></span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+                    <span class="text-slate-400">UTC Offset:</span>
+                    <span id="modalUtc" class="font-mono text-white"></span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-slate-800/60">
+                    <span class="text-slate-400">Geographic Region:</span>
+                    <span id="modalRegion" class="text-slate-200"></span>
+                </div>
+                <div class="flex justify-between py-1.5">
+                    <span class="text-slate-400">Sun Cycle:</span>
+                    <span id="modalSunStatus" class="text-amber-300"></span>
+                </div>
+            </div>
+
+            <button onclick="closeMetadataModal()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // MASTER DATABASE OF CAPITAL CITIES & MAJOR METROS
+        const WORLD_CITIES_DATABASE = [
+            // US CITIES
+            { id: 'us_nyc', name: 'New York City', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+            { id: 'us_lax', name: 'Los Angeles', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_chi', name: 'Chicago', country: 'United States', flag: '🇺🇸', tz: 'America/Chicago', region: 'Americas' },
+            { id: 'us_hou', name: 'Houston', country: 'United States', flag: '🇺🇸', tz: 'America/Chicago', region: 'Americas' },
+            { id: 'us_phx', name: 'Phoenix', country: 'United States', flag: '🇺🇸', tz: 'America/Phoenix', region: 'Americas' },
+            { id: 'us_phl', name: 'Philadelphia', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+            { id: 'us_sat', name: 'San Antonio', country: 'United States', flag: '🇺🇸', tz: 'America/Chicago', region: 'Americas' },
+            { id: 'us_san', name: 'San Diego', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_dal', name: 'Dallas', country: 'United States', flag: '🇺🇸', tz: 'America/Chicago', region: 'Americas' },
+            { id: 'us_sjc', name: 'San Jose', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_aus', name: 'Austin', country: 'United States', flag: '🇺🇸', tz: 'America/Chicago', region: 'Americas' },
+            { id: 'us_sea', name: 'Seattle', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_sfo', name: 'San Francisco', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_mia', name: 'Miami', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+            { id: 'us_las', name: 'Las Vegas', country: 'United States', flag: '🇺🇸', tz: 'America/Los_Angeles', region: 'Americas' },
+            { id: 'us_hnl', name: 'Honolulu', country: 'United States', flag: '🇺🇸', tz: 'Pacific/Honolulu', region: 'Americas' },
+            { id: 'us_anc', name: 'Anchorage', country: 'United States', flag: '🇺🇸', tz: 'America/Anchorage', region: 'Americas' },
+            { id: 'us_den', name: 'Denver', country: 'United States', flag: '🇺🇸', tz: 'America/Denver', region: 'Americas' },
+            { id: 'us_atl', name: 'Atlanta', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+            { id: 'us_bos', name: 'Boston', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+
+            // NOTABLE MAJOR CITIES
+            { id: 'mel', name: 'Melbourne', country: 'Australia', flag: '🇦🇺', tz: 'Australia/Melbourne', region: 'Asia' },
+            { id: 'sgn', name: 'Ho Chi Minh City', country: 'Vietnam', flag: '🇻🇳', tz: 'Asia/Ho_Chi_Minh', region: 'Asia' },
+
+            // EUROPE CAPITALS
+            { id: 'ldn', name: 'London', country: 'United Kingdom', flag: '🇬🇧', tz: 'Europe/London', region: 'Europe' },
+            { id: 'par', name: 'Paris', country: 'France', flag: '🇫🇷', tz: 'Europe/Paris', region: 'Europe' },
+            { id: 'ber', name: 'Berlin', country: 'Germany', flag: '🇩🇪', tz: 'Europe/Berlin', region: 'Europe' },
+            { id: 'rom', name: 'Rome', country: 'Italy', flag: '🇮🇹', tz: 'Europe/Rome', region: 'Europe' },
+            { id: 'mad', name: 'Madrid', country: 'Spain', flag: '🇪🇸', tz: 'Europe/Madrid', region: 'Europe' },
+            { id: 'ams', name: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱', tz: 'Europe/Amsterdam', region: 'Europe' },
+            { id: 'vie', name: 'Vienna', country: 'Austria', flag: '🇦🇹', tz: 'Europe/Vienna', region: 'Europe' },
+            { id: 'bru', name: 'Brussels', country: 'Belgium', flag: '🇧🇪', tz: 'Europe/Brussels', region: 'Europe' },
+            { id: 'prg', name: 'Prague', country: 'Czech Republic', flag: '🇨🇿', tz: 'Europe/Prague', region: 'Europe' },
+            { id: 'cph', name: 'Copenhagen', country: 'Denmark', flag: '🇩🇰', tz: 'Europe/Copenhagen', region: 'Europe' },
+            { id: 'hel', name: 'Helsinki', country: 'Finland', flag: '🇫🇮', tz: 'Europe/Helsinki', region: 'Europe' },
+            { id: 'ath', name: 'Athens', country: 'Greece', flag: '🇬🇷', tz: 'Europe/Athens', region: 'Europe' },
+            { id: 'bud', name: 'Budapest', country: 'Hungary', flag: '🇭🇺', tz: 'Europe/Budapest', region: 'Europe' },
+            { id: 'dub', name: 'Dublin', country: 'Ireland', flag: '🇮🇪', tz: 'Europe/Dublin', region: 'Europe' },
+            { id: 'osl', name: 'Oslo', country: 'Norway', flag: '🇳🇴', tz: 'Europe/Oslo', region: 'Europe' },
+            { id: 'waw', name: 'Warsaw', country: 'Poland', flag: '🇵🇱', tz: 'Europe/Warsaw', region: 'Europe' },
+            { id: 'lis', name: 'Lisbon', country: 'Portugal', flag: '🇵🇹', tz: 'Europe/Lisbon', region: 'Europe' },
+            { id: 'sto', name: 'Stockholm', country: 'Sweden', flag: '🇸🇪', tz: 'Europe/Stockholm', region: 'Europe' },
+            { id: 'brn', name: 'Bern', country: 'Switzerland', flag: '🇨🇭', tz: 'Europe/Zurich', region: 'Europe' },
+            { id: 'iev', name: 'Kyiv', country: 'Ukraine', flag: '🇺🇦', tz: 'Europe/Kyiv', region: 'Europe' },
+
+            // ASIA & PACIFIC CAPITALS
+            { id: 'tky', name: 'Tokyo', country: 'Japan', flag: '🇯🇵', tz: 'Asia/Tokyo', region: 'Asia' },
+            { id: 'bjs', name: 'Beijing', country: 'China', flag: '🇨🇳', tz: 'Asia/Shanghai', region: 'Asia' },
+            { id: 'del', name: 'New Delhi', country: 'India', flag: '🇮🇳', tz: 'Asia/Kolkata', region: 'Asia' },
+            { id: 'seo', name: 'Seoul', country: 'South Korea', flag: '🇰🇷', tz: 'Asia/Seoul', region: 'Asia' },
+            { id: 'jkt', name: 'Jakarta', country: 'Indonesia', flag: '🇮🇩', tz: 'Asia/Jakarta', region: 'Asia' },
+            { id: 'cbr', name: 'Canberra', country: 'Australia', flag: '🇦🇺', tz: 'Australia/Canberra', region: 'Asia' },
+            { id: 'wlg', name: 'Wellington', country: 'New Zealand', flag: '🇳🇿', tz: 'Pacific/Auckland', region: 'Asia' },
+            { id: 'sgp', name: 'Singapore', country: 'Singapore', flag: '🇸🇬', tz: 'Asia/Singapore', region: 'Asia' },
+            { id: 'bkk', name: 'Bangkok', country: 'Thailand', flag: '🇹🇭', tz: 'Asia/Bangkok', region: 'Asia' },
+            { id: 'han', name: 'Hanoi', country: 'Vietnam', flag: '🇻🇳', tz: 'Asia/Ho_Chi_Minh', region: 'Asia' },
+            { id: 'kul', name: 'Kuala Lumpur', country: 'Malaysia', flag: '🇲🇾', tz: 'Asia/Kuala_Lumpur', region: 'Asia' },
+            { id: 'mnl', name: 'Manila', country: 'Philippines', flag: '🇵🇭', tz: 'Asia/Manila', region: 'Asia' },
+            { id: 'dac', name: 'Dhaka', country: 'Bangladesh', flag: '🇧🇩', tz: 'Asia/Dhaka', region: 'Asia' },
+            { id: 'isb', name: 'Islamabad', country: 'Pakistan', flag: '🇵🇰', tz: 'Asia/Karachi', region: 'Asia' },
+
+            // AMERICAS CAPITALS & LATAM
+            { id: 'wash', name: 'Washington, D.C.', country: 'United States', flag: '🇺🇸', tz: 'America/New_York', region: 'Americas' },
+            { id: 'yow', name: 'Ottawa', country: 'Canada', flag: '🇨🇦', tz: 'America/Toronto', region: 'Americas' },
+            { id: 'mex', name: 'Mexico City', country: 'Mexico', flag: '🇲🇽', tz: 'America/Mexico_City', region: 'Americas' },
+            { id: 'sao', name: 'São Paulo', country: 'Brazil', flag: '🇧🇷', tz: 'America/Sao_Paulo', region: 'Americas' },
+            { id: 'bsb', name: 'Brasília', country: 'Brazil', flag: '🇧🇷', tz: 'America/Sao_Paulo', region: 'Americas' },
+            { id: 'bue', name: 'Buenos Aires', country: 'Argentina', flag: '🇦🇷', tz: 'America/Argentina/Buenos_Aires', region: 'Americas' },
+            { id: 'bog', name: 'Bogotá', country: 'Colombia', flag: '🇨🇴', tz: 'America/Bogota', region: 'Americas' },
+            { id: 'scl', name: 'Santiago', country: 'Chile', flag: '🇨🇱', tz: 'America/Santiago', region: 'Americas' },
+            { id: 'lim', name: 'Lima', country: 'Peru', flag: '🇵🇪', tz: 'America/Lima', region: 'Americas' },
+            { id: 'hav', name: 'Havana', country: 'Cuba', flag: '🇨🇺', tz: 'America/Havana', region: 'Americas' },
+
+            // AFRICA CAPITALS
+            { id: 'cai', name: 'Cairo', country: 'Egypt', flag: '🇪🇬', tz: 'Africa/Cairo', region: 'Africa' },
+            { id: 'nbo', name: 'Nairobi', country: 'Kenya', flag: '🇰🇪', tz: 'Africa/Nairobi', region: 'Africa' },
+            { id: 'pry', name: 'Pretoria', country: 'South Africa', flag: '🇿🇦', tz: 'Africa/Johannesburg', region: 'Africa' },
+            { id: 'abj_ng', name: 'Abuja', country: 'Nigeria', flag: '🇳🇬', tz: 'Africa/Lagos', region: 'Africa' },
+            { id: 'acc', name: 'Accra', country: 'Ghana', flag: '🇬🇭', tz: 'Africa/Accra', region: 'Africa' },
+            { id: 'rba', name: 'Rabat', country: 'Morocco', flag: '🇲🇦', tz: 'Africa/Casablanca', region: 'Africa' },
+
+            // MIDDLE EAST & CENTRAL ASIA
+            { id: 'uhd', name: 'Abu Dhabi', country: 'United Arab Emirates', flag: '🇦🇪', tz: 'Asia/Dubai', region: 'Middle East' },
+            { id: 'ruh', name: 'Riyadh', country: 'Saudi Arabia', flag: '🇸🇦', tz: 'Asia/Riyadh', region: 'Middle East' },
+            { id: 'doh', name: 'Doha', country: 'Qatar', flag: '🇶🇦', tz: 'Asia/Qatar', region: 'Middle East' },
+            { id: 'jrs', name: 'Jerusalem', country: 'Israel', flag: '🇮🇱', tz: 'Asia/Jerusalem', region: 'Middle East' },
+            { id: 'ank', name: 'Ankara', country: 'Turkey', flag: '🇹🇷', tz: 'Europe/Istanbul', region: 'Middle East' }
+        ];
+
+        // DEFAULT CITIES
+        const INITIAL_DEFAULT_IDS = ['wash', 'ldn', 'tky', 'par', 'cbr', 'uhd', 'sgn', 'mel', 'sao'];
+
+        // STATE APP VARIABLES
+        let activeCityIds = JSON.parse(localStorage.getItem('gt_active_cities')) || INITIAL_DEFAULT_IDS;
+        let favoriteCityIds = JSON.parse(localStorage.getItem('gt_favorite_cities')) || ['ldn', 'tky'];
+        let use24HourFormat = JSON.parse(localStorage.getItem('gt_use_24h')) || false;
+        let selectedRegion = 'ALL';
+
+        // UTILITIES STATE
+        let timerInterval = null;
+        let timerTimeLeft = 300;
+        let timerRunning = false;
+
+        let stopwatchInterval = null;
+        let stopwatchElapsed = 0;
+        let stopwatchRunning = false;
+        let stopwatchLaps = [];
+
+        // INITIALIZATION
+        window.addEventListener('DOMContentLoaded', () => {
+            initSidebarMobile();
+            initSearchCombobox();
+            initRegionFilter();
+            initTimeFormatToggle();
+            renderAllTabs();
+            
+            setInterval(updateClockDisplays, 1000);
+            updateClockDisplays();
+        });
+
+        // LOCAL CLOCK & HERO SECTION
+        function updateClockDisplays() {
+            const now = new Date();
+
+            try {
+                const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+                const localCity = localTz.split('/')[1]?.replace(/_/g, ' ') || 'Local City';
+                
+                document.getElementById('localCityName').textContent = localCity;
+                document.getElementById('localTimezoneStr').textContent = localTz;
+                
+                const timeStr = formatTime(now, localTz);
+                const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: localTz });
+                const utcOffset = getUtcOffsetString(localTz);
+
+                document.getElementById('localTimeDigits').textContent = timeStr;
+                document.getElementById('localDateStr').textContent = dateStr;
+                document.getElementById('localUtcOffset').textContent = utcOffset;
+
+                const localHour = parseInt(now.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false, timeZone: localTz }));
+                const isDay = localHour >= 6 && localHour < 18;
+                
+                const badge = document.getElementById('localDayNightBadge');
+                badge.innerHTML = isDay 
+                    ? `<i class="fa-solid fa-sun text-amber-400"></i><span class="text-amber-300">Daytime</span>`
+                    : `<i class="fa-solid fa-moon text-indigo-400"></i><span class="text-indigo-300">Nighttime</span>`;
+            } catch(e) {
+                console.error("Error setting local time:", e);
+            }
+
+            renderCityCards();
+        }
+
+        function formatTime(dateObj, timezone) {
+            try {
+                return dateObj.toLocaleTimeString('en-US', {
+                    timeZone: timezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: !use24HourFormat
+                });
+            } catch (e) {
+                return "--:--:--";
+            }
+        }
+
+        function getUtcOffsetString(timezone) {
+            try {
+                const now = new Date();
+                const str = now.toLocaleTimeString('en-US', { timeZoneName: 'short', timeZone: timezone });
+                const parts = str.split(' ');
+                return parts[parts.length - 1] || 'UTC';
+            } catch (e) {
+                return 'UTC';
+            }
+        }
+
+        function isDaytimeInTz(timezone) {
+            try {
+                const hourStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', hour12: false, timeZone: timezone });
+                const hour = parseInt(hourStr.split(':')[0], 10);
+                return hour >= 6 && hour < 18;
+            } catch(e) {
+                return true;
+            }
+        }
+
+        // RENDER CITY CARDS USING SAFE DATA ATTR PARSING
+        function renderCityCards() {
+            const favoritesGrid = document.getElementById('favoritesGrid');
+            const citiesGrid = document.getElementById('citiesGrid');
+            const emptyState = document.getElementById('emptyCitiesState');
+            const emptyFavorites = document.getElementById('emptyFavorites');
+
+            let displayList = WORLD_CITIES_DATABASE.filter(c => activeCityIds.includes(c.id));
+
+            if (selectedRegion !== 'ALL') {
+                displayList = displayList.filter(c => c.region === selectedRegion);
+            }
+
+            const favorites = displayList.filter(c => favoriteCityIds.includes(c.id));
+            const regular = displayList.filter(c => !favoriteCityIds.includes(c.id));
+
+            document.getElementById('favCount').textContent = favorites.length;
+            document.getElementById('totalCitiesCount').textContent = displayList.length;
+
+            emptyState.classList.toggle('hidden', displayList.length > 0);
+            emptyFavorites.classList.toggle('hidden', favorites.length > 0);
+
+            favoritesGrid.innerHTML = favorites.map(city => createCityCardHTML(city, true)).join('');
+            citiesGrid.innerHTML = regular.map(city => createCityCardHTML(city, false)).join('');
+        }
+
+        function createCityCardHTML(city, isFavorite) {
+            const now = new Date();
+            const timeStr = formatTime(now, city.tz);
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: city.tz });
+            const isDay = isDaytimeInTz(city.tz);
+            const utcOffset = getUtcOffsetString(city.tz);
+
+            const bgClass = isDay ? 'day-gradient' : 'night-gradient';
+            const dayBadgeHTML = isDay 
+                ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30"><i class="fa-solid fa-sun mr-1 text-amber-500"></i>Day</span>`
+                : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"><i class="fa-solid fa-moon mr-1"></i>Night</span>`;
+
+            return `
+                <div class="${bgClass} rounded-2xl p-5 relative group transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col justify-between">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="text-2xl">${city.flag}</span>
+                            <div>
+                                <h4 class="font-bold text-base text-white leading-snug">${city.name}</h4>
+                                <p class="text-xs text-slate-400">${city.country}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-1">
+                            <button onclick="openMetadataModal('${city.id}')" title="View details" class="text-slate-400 hover:text-blue-500 p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 transition-colors">
+                                <i class="fa-solid fa-circle-info text-xs"></i>
+                            </button>
+
+                            <button onclick="toggleFavorite('${city.id}')" title="${isFavorite ? 'Unpin Favorite' : 'Pin Favorite'}" class="${isFavorite ? 'text-amber-400' : 'text-slate-400 hover:text-amber-400'} p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 transition-colors">
+                                <i class="fa-solid fa-star text-xs"></i>
+                            </button>
+
+                            <button onclick="removeCity('${city.id}')" title="Remove City" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/80 transition-colors">
+                                <i class="fa-solid fa-xmark text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="my-4">
+                        <div class="font-mono-time text-3xl font-bold text-white tracking-tight">
+                            ${timeStr}
+                        </div>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-xs text-slate-300 font-medium">${dateStr}</span>
+                            <span class="text-slate-400">•</span>
+                            <span class="text-[11px] text-slate-400 font-mono">${utcOffset}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-slate-800/60 pt-3 text-xs">
+                        ${dayBadgeHTML}
+                        <span class="text-[11px] text-slate-400 hover:text-blue-500 cursor-pointer" onclick="openMetadataModal('${city.id}')">
+                            Details <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // SEARCH COMBOBOX
+        function initSearchCombobox() {
+            const input = document.getElementById('citySearchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const results = document.getElementById('searchResults');
+
+            input.addEventListener('input', (e) => {
+                const query = e.target.value.trim().toLowerCase();
+                clearBtn.classList.toggle('hidden', query.length === 0);
+
+                if (query.length === 0) {
+                    results.classList.add('hidden');
+                    return;
+                }
+
+                const matches = WORLD_CITIES_DATABASE.filter(c => 
+                    c.name.toLowerCase().includes(query) || 
+                    c.country.toLowerCase().includes(query)
+                );
+
+                if (matches.length === 0) {
+                    results.innerHTML = `
+                        <div class="p-4 text-center text-xs text-slate-400">
+                            No cities found matching "${query}"
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = matches.map(city => {
+                        const isAdded = activeCityIds.includes(city.id);
+                        return `
+                            <div onclick="selectSearchResult('${city.id}')" class="p-3 hover:bg-slate-800 cursor-pointer flex items-center justify-between transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-xl">${city.flag}</span>
+                                    <div>
+                                        <div class="text-sm font-semibold text-white">${city.name}</div>
+                                        <div class="text-xs text-slate-400">${city.country} (${city.region})</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    ${isAdded 
+                                        ? `<span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 font-medium">Added</span>` 
+                                        : `<span class="text-xs px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium shadow"><i class="fa-solid fa-plus mr-1"></i>Add</span>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                results.classList.remove('hidden');
+            });
+
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                clearBtn.classList.add('hidden');
+                results.classList.add('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!document.getElementById('searchContainer').contains(e.target)) {
+                    results.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectSearchResult(cityId) {
+            if (!activeCityIds.includes(cityId)) {
+                activeCityIds.push(cityId);
+                saveState();
+                renderCityCards();
+            }
+            document.getElementById('citySearchInput').value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        function removeCity(cityId) {
+            activeCityIds = activeCityIds.filter(id => id !== cityId);
+            favoriteCityIds = favoriteCityIds.filter(id => id !== cityId);
+            saveState();
+            renderCityCards();
+        }
+
+        function toggleFavorite(cityId) {
+            if (favoriteCityIds.includes(cityId)) {
+                favoriteCityIds = favoriteCityIds.filter(id => id !== cityId);
+            } else {
+                favoriteCityIds.push(cityId);
+            }
+            saveState();
+            renderCityCards();
+        }
+
+        function resetDefaultCities() {
+            activeCityIds = [...INITIAL_DEFAULT_IDS];
+            favoriteCityIds = ['ldn', 'tky'];
+            selectedRegion = 'ALL';
+            document.getElementById('regionFilter').value = 'ALL';
+            saveState();
+            renderCityCards();
+        }
+
+        function initRegionFilter() {
+            const filter = document.getElementById('regionFilter');
+            filter.addEventListener('change', (e) => {
+                selectedRegion = e.target.value;
+                renderCityCards();
+            });
+
+            document.getElementById('resetDefaultsBtn').addEventListener('click', resetDefaultCities);
+        }
+
+        function initTimeFormatToggle() {
+            const btn = document.getElementById('toggleTimeFormat');
+            btn.addEventListener('click', () => {
+                use24HourFormat = !use24HourFormat;
+                btn.textContent = use24HourFormat ? '24H' : '12H';
+                localStorage.setItem('gt_use_24h', JSON.stringify(use24HourFormat));
+                updateClockDisplays();
+            });
+            btn.textContent = use24HourFormat ? '24H' : '12H';
+        }
+
+        function saveState() {
+            localStorage.setItem('gt_active_cities', JSON.stringify(activeCityIds));
+            localStorage.setItem('gt_favorite_cities', JSON.stringify(favoriteCityIds));
+        }
+
+        // METADATA MODAL
+        function openMetadataModal(cityId) {
+            const city = WORLD_CITIES_DATABASE.find(c => c.id === cityId);
+            if (!city) return;
+
+            document.getElementById('modalFlag').textContent = city.flag;
+            document.getElementById('modalCityName').textContent = city.name;
+            document.getElementById('modalCountry').textContent = city.country;
+            document.getElementById('modalTimezone').textContent = city.tz;
+            document.getElementById('modalUtc').textContent = getUtcOffsetString(city.tz);
+            document.getElementById('modalRegion').textContent = city.region;
+            
+            const isDay = isDaytimeInTz(city.tz);
+            document.getElementById('modalSunStatus').textContent = isDay ? 'Daytime (Solar)' : 'Nighttime (Solar)';
+
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+
+        function closeMetadataModal() {
+            document.getElementById('infoModal').classList.add('hidden');
+        }
+
+        // TABS NAVIGATION & MEETING PLANNER
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/20');
+                btn.classList.add('text-slate-400', 'hover:text-white');
+            });
+
+            const activePanel = document.getElementById(`tab-${tabId}`);
+            if (activePanel) activePanel.classList.remove('hidden');
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/20');
+                activeNav.classList.remove('text-slate-400', 'hover:text-white');
+            }
+
+            if (tabId === 'planner') {
+                renderMeetingPlanner();
+            }
+
+            closeMobileSidebar();
+        }
+
+        function renderAllTabs() {
+            initPlannerSlider();
+            updateTimerDisplay();
+            updateStopwatchDisplay();
+        }
+
+        function initPlannerSlider() {
+            const slider = document.getElementById('plannerHourSlider');
+            slider.addEventListener('input', () => {
+                renderMeetingPlanner();
+            });
+        }
+
+        function renderMeetingPlanner() {
+            const slider = document.getElementById('plannerHourSlider');
+            const hourOffset = parseInt(slider.value, 10);
+            
+            const baseDate = new Date();
+            baseDate.setHours(hourOffset, 0, 0, 0);
+            
+            document.getElementById('plannerBaseTimeDisplay').textContent = baseDate.toLocaleTimeString('en-US', {
+                hour: 'numeric', minute: '2-digit', hour12: true
+            }) + " (Base Local)";
+
+            const container = document.getElementById('plannerList');
+            const displayCities = WORLD_CITIES_DATABASE.filter(c => activeCityIds.includes(c.id));
+
+            if (displayCities.length === 0) {
+                container.innerHTML = `<div class="text-center p-6 text-slate-400 text-xs">No active cities saved to compare.</div>`;
+                return;
+            }
+
+            container.innerHTML = displayCities.map(city => {
+                const nowTarget = new Date();
+                nowTarget.setHours(hourOffset, 0, 0, 0);
+
+                const cityTimeStr = nowTarget.toLocaleTimeString('en-US', {
+                    timeZone: city.tz, hour: 'numeric', minute: '2-digit', hour12: !use24HourFormat
+                });
+
+                const cityHour = parseInt(nowTarget.toLocaleTimeString('en-US', {
+                    timeZone: city.tz, hour: '2-digit', hour12: false
+                }), 10);
+
+                const isWorkingHour = cityHour >= 9 && cityHour < 17;
+                const statusBadge = isWorkingHour 
+                    ? `<span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal Work Hour</span>`
+                    : `<span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800 text-slate-500 border border-slate-700">Outside Work Hours</span>`;
+
+                return `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800 gap-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">${city.flag}</span>
+                            <div>
+                                <h4 class="font-bold text-sm text-white">${city.name}</h4>
+                                <p class="text-xs text-slate-400">${city.country}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-4">
+                            <div class="font-mono-time text-lg font-bold text-white">${cityTimeStr}</div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // TIMER UTILITY
+        function setTimerPreset(mins) {
+            timerTimeLeft = mins * 60;
+            updateTimerDisplay();
+        }
+
+        function setCustomTimer() {
+            const min = parseInt(document.getElementById('timerMinutesInput').value) || 0;
+            const sec = parseInt(document.getElementById('timerSecondsInput').value) || 0;
+            timerTimeLeft = (min * 60) + sec;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timerTimeLeft / 60).toString().padStart(2, '0');
+            const s = (timerTimeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('startTimerBtn');
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                btn.textContent = 'Start';
+                btn.classList.replace('bg-amber-600', 'bg-blue-600');
+            } else {
+                if (timerTimeLeft <= 0) return;
+                timerRunning = true;
+                btn.textContent = 'Pause';
+                btn.classList.replace('bg-blue-600', 'bg-amber-600');
+
+                timerInterval = setInterval(() => {
+                    if (timerTimeLeft > 0) {
+                        timerTimeLeft--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        timerRunning = false;
+                        btn.textContent = 'Start';
+                        btn.classList.replace('bg-amber-600', 'bg-blue-600');
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            timerTimeLeft = 300;
+            document.getElementById('startTimerBtn').textContent = 'Start';
+            document.getElementById('startTimerBtn').classList.replace('bg-amber-600', 'bg-blue-600');
+            updateTimerDisplay();
+        }
+
+        // STOPWATCH UTILITY
+        function updateStopwatchDisplay() {
+            const totalMs = stopwatchElapsed;
+            const mins = Math.floor(totalMs / 60000).toString().padStart(2, '0');
+            const secs = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+            const ms = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
+            
+            document.getElementById('stopwatchDisplay').textContent = `${mins}:${secs}.${ms}`;
+        }
+
+        function toggleStopwatch() {
+            const btn = document.getElementById('startStopwatchBtn');
+            if (stopwatchRunning) {
+                clearInterval(stopwatchInterval);
+                stopwatchRunning = false;
+                btn.textContent = 'Start';
+                btn.classList.replace('bg-amber-600', 'bg-blue-600');
+            } else {
+                stopwatchRunning = true;
+                btn.textContent = 'Pause';
+                btn.classList.replace('bg-blue-600', 'bg-amber-600');
+
+                const startTime = Date.now() - stopwatchElapsed;
+                stopwatchInterval = setInterval(() => {
+                    stopwatchElapsed = Date.now() - startTime;
+                    updateStopwatchDisplay();
+                }, 10);
+            }
+        }
+
+        function recordLap() {
+            if (!stopwatchRunning && stopwatchElapsed === 0) return;
+            stopwatchLaps.unshift(stopwatchElapsed);
+            
+            const lapsContainer = document.getElementById('lapsContainer');
+            const lapsList = document.getElementById('lapsList');
+            lapsContainer.classList.remove('hidden');
+
+            lapsList.innerHTML = stopwatchLaps.map((lapMs, idx) => {
+                const lapNum = stopwatchLaps.length - idx;
+                const mins = Math.floor(lapMs / 60000).toString().padStart(2, '0');
+                const secs = Math.floor((lapMs % 60000) / 1000).toString().padStart(2, '0');
+                const ms = Math.floor((lapMs % 1000) / 10).toString().padStart(2, '0');
+                return `
+                    <div class="flex justify-between py-1 border-b border-slate-800/60">
+                        <span class="text-slate-400">Lap ${lapNum}</span>
+                        <span class="text-white">${mins}:${secs}.${ms}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function resetStopwatch() {
+            clearInterval(stopwatchInterval);
+            stopwatchRunning = false;
+            stopwatchElapsed = 0;
+            stopwatchLaps = [];
+            
+            document.getElementById('startStopwatchBtn').textContent = 'Start';
+            document.getElementById('startStopwatchBtn').classList.replace('bg-amber-600', 'bg-blue-600');
+            document.getElementById('lapsContainer').classList.add('hidden');
+            document.getElementById('lapsList').innerHTML = '';
+            updateStopwatchDisplay();
+        }
+
+        // MOBILE SIDEBAR RESPONSIVE NAVIGATION
+        function initSidebarMobile() {
+            const btn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            btn.addEventListener('click', () => {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            });
+
+            overlay.addEventListener('click', closeMobileSidebar);
+        }
+
+        function closeMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
